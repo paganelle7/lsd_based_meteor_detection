@@ -29,4 +29,22 @@ def get_slice(image_sequence, background_kernel, image_kernel, cadr_in_work=10):
     ready_for_grad_image = torch.nn.functional.conv2d(ready_for_grad_image[None,None,:,:], image_kernel.unsqueeze(0).unsqueeze(0), padding='same')[0,0]
 
     return ready_for_grad_image
+
+def LULU(data, size = 2):
+    m = torch.nn.ZeroPad2d(size-1)
+    u_data = m(data).unfold(0, size*2-1, 1 ).unfold(1, size*2-1, 1)
+    L = torch.concat((u_data[:,:,:size,:size].min(2)[0].min(2)[0].unsqueeze(0), u_data[:,:,:size,size-1:].min(2)[0].min(2)[0].unsqueeze(0),u_data[:,:,size-1:,:size].min(2)[0].min(2)[0].unsqueeze(0),u_data[:,:,size-1:,size-1:].min(2)[0].min(2)[0].unsqueeze(0))).max(0)[0]
+    u_data = m(L).clone().unfold(0, size*2-1, 1).unfold(1, size*2-1, 1)
+    U = torch.concat((u_data[:,:,:size,:size].max(2)[0].max(2)[0].unsqueeze(0), u_data[:,:,:size,size-1:].max(2)[0].max(2)[0].unsqueeze(0),u_data[:,:,size-1:,:size].max(2)[0].max(2)[0].unsqueeze(0),u_data[:,:,size-1:,size-1:].max(2)[0].max(2)[0].unsqueeze(0))).min(0)[0]
+    return U
+
+def median_torch(data, size=7):
+    m = torch.nn.ZeroPad2d(int((size-1)/2))
     
+    u_data = m(data).unfold(0, size, 1).unfold(1, size, 1)
+    u_data = u_data.reshape((u_data.shape[0], u_data.shape[1], size**2))
+    # print(u_data.shape)
+    return u_data.sort(-1)[0][:,:,int((size**2-1)/2)]
+
+def denoising_torch(data, LULU_size, meadian_filter_size):
+    return median_torch(LULU(data, size=LULU_size), size=meadian_filter_size)
