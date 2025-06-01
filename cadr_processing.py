@@ -29,7 +29,7 @@ def get_slice(image_sequence, background_kernel, image_kernel, cadr_in_work=10):
     ready_for_grad_image = torch.nn.functional.conv2d(ready_for_grad_image[None,None,:,:], image_kernel.unsqueeze(0).unsqueeze(0), padding='same')[0,0]
 
     return ready_for_grad_image
-
+    
 def LULU(data, size = 2):
     m = torch.nn.ZeroPad2d(size-1)
     u_data = m(data).unfold(0, size*2-1, 1 ).unfold(1, size*2-1, 1)
@@ -48,3 +48,12 @@ def median_torch(data, size=7):
 
 def denoising_torch(data, LULU_size, meadian_filter_size):
     return median_torch(LULU(data, size=LULU_size), size=meadian_filter_size)
+
+def epiphania(data, size=3):
+    m = torch.nn.ZeroPad2d(int((size-1)/2))
+    step = size*2 - 3 
+    u_data = m(data).unfold(0, size, 1).unfold(1, size, 1)
+    test = torch.cat([u_data[:,:,0], u_data[:,:,1:-1,-1],u_data[:,:,-1].flip(-1),u_data[:,:,1:-1,0].flip(-1)],dim=2) 
+    tt = torch.cat([ test.roll(step,-1) + test, test.roll(step+1,-1) + test, test.roll(step+2,-1) + test ], dim=2)/2
+    mt = tt.max(dim=-1)[0]
+    return torch.where(data>mt, data, mt)
